@@ -100,7 +100,8 @@ ComfyUI a été rédigée par le modèle de conversation. Une seconde demande do
 ## Série
 
 - Module suivant : **Le workflow de l'organisation** (charte graphique imposée dans le workflow,
-  piège du lien écrasé) — `clic-par-clic-comfyui-02-workflow-organisation` (à paraître).
+  piège du lien écrasé) —
+  [`clic-par-clic-comfyui-02-workflow-organisation`](https://github.com/guilhem-/clic-par-clic-comfyui-02-workflow-organisation).
 - Côté utilisateur : module « Génération et retouche d'images » de la formation Open WebUI.
 
 ## Licence
