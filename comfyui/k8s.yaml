@@ -1,0 +1,89 @@
+# Serveur d'images de l'organisation : ComfyUI, dans le cluster tgpu (services/k3d/tgpu.mjs).
+#   comfyui   interface web et API (/prompt, /history, /view, /ws), publiée sur http://comfyui.localhost:8090
+# Le cluster de tournage tterm y accède par le relais de k8s-relais.yaml (http://comfyui.localhost:8080
+# pour le navigateur, http://comfyui.comfyui.svc.cluster.local:8188 pour Open WebUI).
+# Carte graphique (8 Go) partagée avec le studio audio : runtime nvidia, NVIDIA_VISIBLE_DEVICES, pas de
+# plugin de périphérique. ComfyUI gère sa mémoire vidéo dynamiquement (comfy-aimdo) et laisse
+# --vram-headroom Go libres en tenant compte des autres programmes (studio audio, OBS).
+# Volume : /modeles/comfyui (volume Docker tgpu-modeles, monté dans le nœud par tgpu.mjs) =
+# --base-directory de ComfyUI : models/ (Job comfyui-modeles), input/, output/, user/ (réglages et
+# workflows de l'interface), temp/.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: comfyui
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comfyui
+  namespace: comfyui
+spec:
+  replicas: 1
+  strategy: { type: Recreate }         # une seule carte : l'ancien pod libère sa mémoire avant le nouveau
+  selector:
+    matchLabels: { app: comfyui }
+  template:
+    metadata:
+      labels: { app: comfyui }
+    spec:
+      runtimeClassName: nvidia
+      containers:
+        - name: comfyui
+          image: comfyui:1
+          imagePullPolicy: IfNotPresent   # image importée par « k3d image import », pas de registre
+          command:
+            - python
+            - main.py
+            - --listen=0.0.0.0
+            - --port=8188
+            - --base-directory=/modeles/comfyui
+            - --vram-headroom=1.5          # Go gardés libres pour le studio audio et OBS
+            - --preview-method=latent2rgb  # aperçu pendant le calcul, dans l'interface filmée
+          ports: [{ containerPort: 8188 }]
+          env:
+            - { name: NVIDIA_VISIBLE_DEVICES, value: all }
+            - { name: NVIDIA_DRIVER_CAPABILITIES, value: "compute,utility" }
+            - { name: HOME, value: /modeles/comfyui/user }
+          readinessProbe:
+            httpGet: { path: /system_stats, port: 8188 }
+            periodSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            httpGet: { path: /system_stats, port: 8188 }
+            periodSeconds: 5
+            failureThreshold: 60
+          resources:
+            requests: { cpu: "1", memory: 4Gi }
+          volumeMounts:
+            - { name: modeles, mountPath: /modeles }
+            - { name: shm, mountPath: /dev/shm }
+      volumes:
+        - name: modeles
+          hostPath: { path: /modeles, type: DirectoryOrCreate }
+        - name: shm
+          emptyDir: { medium: Memory, sizeLimit: 2Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: comfyui
+  namespace: comfyui
+spec:
+  selector: { app: comfyui }
+  ports: [{ port: 8188, targetPort: 8188 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: comfyui
+  namespace: comfyui
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: comfyui.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: comfyui, port: { number: 8188 } } }
