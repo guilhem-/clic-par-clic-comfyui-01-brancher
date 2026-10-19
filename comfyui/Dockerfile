@@ -1,12 +1,12 @@
-# Serveur d'images de l'organisation : ComfyUI, dans le cluster tgpu (carte graphique).
-#   docker build -t comfyui:1 services/comfyui
-# Versions épinglées : ComfyUI (archive de l'étiquette GitHub), PyTorch CUDA 13.0 (le pilote Windows de
-# la machine, 581.95, fournit CUDA 13.0). Les dépendances de ComfyUI sont celles de son
-# requirements.txt à cette étiquette (interface web, modèles de workflows et noyaux comfy-kitchen y
-# sont épinglés). Aucun nœud personnalisé, pas de ComfyUI-Manager.
-# Pilote CUDA : fourni par le runtime NVIDIA du nœud (bibliothèques de la machine), pas par l'image.
-# Poids des modèles, entrées, sorties et réglages de l'interface : hors de l'image, dans le volume du
-# nœud /modeles/comfyui (--base-directory), téléchargés par le Job comfyui-modeles (k8s.yaml).
+# The organization's image server: ComfyUI, in the GPU cluster (k3d cluster "tgpu" in the series).
+#   docker build -t comfyui:1 comfyui
+# Pinned versions: ComfyUI (archive of the GitHub tag), PyTorch CUDA 13.0 (the machine's Windows
+# driver, 581.95, provides CUDA 13.0). ComfyUI's dependencies are those of its requirements.txt at
+# this tag (web interface, workflow templates and comfy-kitchen kernels are pinned there). No custom
+# node, no ComfyUI-Manager.
+# CUDA driver: provided by the node's NVIDIA runtime (the machine's libraries), not by the image.
+# Model weights, inputs, outputs and interface settings: outside the image, in the node's volume
+# /modeles/comfyui (--base-directory, see k8s.yaml); download the weights there (see README).
 FROM python:3.13.16-slim
 
 ARG TORCH=2.14.1
@@ -21,10 +21,10 @@ RUN mkdir -p /opt/comfyui && tar -xzf /tmp/comfyui.tar.gz --strip-components=1 -
   && pip install --no-cache-dir -r /opt/comfyui/requirements.txt \
   && python -c "import torch, torchvision; assert torch.__version__ == '${TORCH}+${CUDA}', torch.__version__; assert torchvision.__version__.startswith('${TORCHVISION}')"
 
-# Compilateur C : Triton (livré avec PyTorch) compile au premier appel son module de pilote CUDA ;
-# PyTorch 2.14 passe par Triton pour certaines opérations (bmm_outer_product de l'encodeur de texte).
-# Sans gcc : « Failed to find C compiler » dès le premier CLIPTextEncode. Noyaux compilés gardés dans
-# ~/.triton (HOME=/modeles/comfyui/user, k8s.yaml).
+# C compiler: Triton (shipped with PyTorch) compiles its CUDA driver module on first use;
+# PyTorch 2.14 goes through Triton for some operations (bmm_outer_product of the text encoder).
+# Without gcc: "Failed to find C compiler" from the first CLIPTextEncode. Compiled kernels are kept
+# in ~/.triton (HOME=/modeles/comfyui/user, k8s.yaml).
 RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home --uid 1000 comfy

@@ -55,7 +55,7 @@
     },
     "class_type": "SaveImage",
     "_meta": {
-      "title": "Enregistrer Image"
+      "title": "Save Image"
     }
   },
   "11": {
@@ -85,7 +85,7 @@
   },
   "27": {
     "inputs": {
-      "text": "Description écrite par Open WebUI",
+      "text": "Description written by Open WebUI",
       "clip": [
         "30",
         0
@@ -103,7 +103,7 @@
     },
     "class_type": "UNETLoader",
     "_meta": {
-      "title": "Charger Modèle Diffusion"
+      "title": "Load Diffusion Model"
     }
   },
   "29": {
@@ -112,7 +112,7 @@
     },
     "class_type": "VAELoader",
     "_meta": {
-      "title": "Charger VAE"
+      "title": "Load VAE"
     }
   },
   "30": {
@@ -123,7 +123,7 @@
     },
     "class_type": "CLIPLoader",
     "_meta": {
-      "title": "Charger CLIP"
+      "title": "Load CLIP"
     }
   },
   "33": {
@@ -135,7 +135,7 @@
     },
     "class_type": "ConditioningZeroOut",
     "_meta": {
-      "title": "ConditioningZeroOut"
+      "title": "Conditioning Zero Out"
     }
   }
 }

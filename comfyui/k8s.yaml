@@ -1,13 +1,13 @@
-# Serveur d'images de l'organisation : ComfyUI, dans le cluster tgpu (services/k3d/tgpu.mjs).
-#   comfyui   interface web et API (/prompt, /history, /view, /ws), publiée sur http://comfyui.localhost:8090
-# Le cluster de tournage tterm y accède par le relais de k8s-relais.yaml (http://comfyui.localhost:8080
-# pour le navigateur, http://comfyui.comfyui.svc.cluster.local:8188 pour Open WebUI).
-# Carte graphique (8 Go) partagée avec le studio audio : runtime nvidia, NVIDIA_VISIBLE_DEVICES, pas de
-# plugin de périphérique. ComfyUI gère sa mémoire vidéo dynamiquement (comfy-aimdo) et laisse
-# --vram-headroom Go libres en tenant compte des autres programmes (studio audio, OBS).
-# Volume : /modeles/comfyui (volume Docker tgpu-modeles, monté dans le nœud par tgpu.mjs) =
-# --base-directory de ComfyUI : models/ (Job comfyui-modeles), input/, output/, user/ (réglages et
-# workflows de l'interface), temp/.
+# The organization's image server: ComfyUI, in the tgpu cluster (services/k3d/tgpu.mjs).
+#   comfyui   web interface and API (/prompt, /history, /view, /ws), published on http://comfyui.localhost:8090
+# The tterm recording cluster reaches it through the relay in k8s-relais.yaml (http://comfyui.localhost:8080
+# for the browser, http://comfyui.comfyui.svc.cluster.local:8188 for Open WebUI).
+# Graphics card (8 GB) shared with the audio studio: nvidia runtime, NVIDIA_VISIBLE_DEVICES, no
+# device plugin. ComfyUI manages its video memory dynamically (comfy-aimdo) and keeps
+# --vram-headroom GB free, taking the other programs into account (audio studio, OBS).
+# Volume: /modeles/comfyui (Docker volume tgpu-modeles, mounted in the node by tgpu.mjs) =
+# ComfyUI's --base-directory: models/ (comfyui-modeles Job), input/, output/, user/ (settings and
+# interface workflows), temp/.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -20,7 +20,7 @@ metadata:
   namespace: comfyui
 spec:
   replicas: 1
-  strategy: { type: Recreate }         # une seule carte : l'ancien pod libère sa mémoire avant le nouveau
+  strategy: { type: Recreate }         # a single card: the old pod frees its memory before the new one starts
   selector:
     matchLabels: { app: comfyui }
   template:
@@ -31,15 +31,15 @@ spec:
       containers:
         - name: comfyui
           image: comfyui:1
-          imagePullPolicy: IfNotPresent   # image importée par « k3d image import », pas de registre
+          imagePullPolicy: IfNotPresent   # image loaded with "k3d image import", no registry
           command:
             - python
             - main.py
             - --listen=0.0.0.0
             - --port=8188
             - --base-directory=/modeles/comfyui
-            - --vram-headroom=1.5          # Go gardés libres pour le studio audio et OBS
-            - --preview-method=latent2rgb  # aperçu pendant le calcul, dans l'interface filmée
+            - --vram-headroom=1.5          # GB kept free for the audio studio and OBS
+            - --preview-method=latent2rgb  # preview while computing, in the filmed interface
           ports: [{ containerPort: 8188 }]
           env:
             - { name: NVIDIA_VISIBLE_DEVICES, value: all }
